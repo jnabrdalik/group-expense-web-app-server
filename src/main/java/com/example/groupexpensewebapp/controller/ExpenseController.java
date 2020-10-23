@@ -2,7 +2,6 @@ package com.example.groupexpensewebapp.controller;
 
 import com.example.groupexpensewebapp.dto.ExpenseDetails;
 import com.example.groupexpensewebapp.dto.ExpenseInput;
-import com.example.groupexpensewebapp.dto.ExpenseSummary;
 import com.example.groupexpensewebapp.service.ExpenseService;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,12 +21,12 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public ExpenseSummary addExpense(@RequestBody ExpenseInput input) {
+    public ExpenseDetails addExpense(@RequestBody ExpenseInput input) {
         return expenseService.addExpense(input);
     }
 
     @PutMapping("/{id}")
-    public ExpenseSummary editExpense(@PathVariable long id, @RequestBody ExpenseInput input) {
+    public ExpenseDetails editExpense(@PathVariable long id, @RequestBody ExpenseInput input) {
         return expenseService.editExpense(id, input);
     }
 

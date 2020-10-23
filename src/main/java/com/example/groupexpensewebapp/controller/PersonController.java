@@ -1,6 +1,5 @@
 package com.example.groupexpensewebapp.controller;
 
-
 import com.example.groupexpensewebapp.dto.PersonDetails;
 import com.example.groupexpensewebapp.dto.PersonInput;
 import com.example.groupexpensewebapp.dto.PersonSummary;

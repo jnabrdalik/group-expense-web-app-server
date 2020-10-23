@@ -8,18 +8,17 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @Data
-public class User {
+public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
-    private String login;
+    private String name;
 
     private String password;
 
-    private String email;
+    @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL)
+    private List<Group> createdGroups;
 
-    @OneToMany(mappedBy = "relatedUser", cascade = CascadeType.ALL)
-    private List<Person> relatedPersons;
 }

@@ -5,8 +5,10 @@ import com.example.groupexpensewebapp.dto.PersonInput;
 import com.example.groupexpensewebapp.dto.PersonSummary;
 import com.example.groupexpensewebapp.model.Group;
 import com.example.groupexpensewebapp.model.Person;
+import com.example.groupexpensewebapp.model.UserEntity;
 import com.example.groupexpensewebapp.repository.GroupRepository;
 import com.example.groupexpensewebapp.repository.PersonRepository;
+import com.example.groupexpensewebapp.repository.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
@@ -15,17 +17,21 @@ public class PersonService {
 
     private final PersonRepository repository;
     private final GroupRepository groupRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
 
-    public PersonService(PersonRepository repository, GroupRepository groupRepository) {
+    public PersonService(PersonRepository repository, GroupRepository groupRepository, UserRepository userRepository, ModelMapper modelMapper) {
         this.repository = repository;
         this.groupRepository = groupRepository;
+        this.userRepository = userRepository;
+        this.modelMapper = modelMapper;
     }
 
     public PersonDetails getPersonDetails(long personId) {
         Person person = repository.findById(personId)
                 .orElseThrow(IllegalArgumentException::new);
 
-        return mapToPersonDetails(person);
+        return modelMapper.map(person, PersonDetails.class);
     }
 
     public PersonSummary addPerson(PersonInput input) {
@@ -40,8 +46,17 @@ public class PersonService {
         person.setName(input.getName());
         person.setGroup(group);
 
+        long relatedUserId = input.getRelatedUserId();
+        if (relatedUserId != 0) {
+            UserEntity relatedUser = userRepository.findById(relatedUserId)
+                    .orElseThrow(IllegalArgumentException::new);
+
+            person.setRelatedUser(relatedUser);
+            person.setName(relatedUser.getName());
+        }
+
         Person addedPerson = repository.save(person);
-        return mapToPersonSummary(addedPerson);
+        return modelMapper.map(addedPerson, PersonSummary.class);
     }
 
     public PersonSummary editPerson(long personId, PersonInput input) {
@@ -55,20 +70,12 @@ public class PersonService {
         person.setName(input.getName());
 
         repository.save(person);
-        return mapToPersonSummary(person);
+        return modelMapper.map(person, PersonSummary.class);
     }
 
     public void deletePerson(long personId) {
         repository.deleteById(personId);
     }
 
-    public PersonSummary mapToPersonSummary(Person person) {
-        ModelMapper modelMapper = new ModelMapper();
-        return modelMapper.map(person, PersonSummary.class);
-    }
 
-    public PersonDetails mapToPersonDetails(Person person) {
-        ModelMapper modelMapper = new ModelMapper();
-        return modelMapper.map(person, PersonDetails.class);
-    }
 }

@@ -1,7 +1,6 @@
 package com.example.groupexpensewebapp.service;
 
 import com.example.groupexpensewebapp.dto.Debt;
-import com.example.groupexpensewebapp.dto.ExpenseDetails;
 import com.example.groupexpensewebapp.dto.PersonSummary;
 import com.example.groupexpensewebapp.model.Expense;
 import com.example.groupexpensewebapp.model.Person;

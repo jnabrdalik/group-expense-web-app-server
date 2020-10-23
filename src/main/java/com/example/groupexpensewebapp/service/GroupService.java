@@ -4,55 +4,61 @@ import com.example.groupexpensewebapp.dto.*;
 import com.example.groupexpensewebapp.model.Expense;
 import com.example.groupexpensewebapp.model.Group;
 import com.example.groupexpensewebapp.model.Person;
-import com.example.groupexpensewebapp.repository.ExpenseRepository;
+import com.example.groupexpensewebapp.model.UserEntity;
 import com.example.groupexpensewebapp.repository.GroupRepository;
+import com.example.groupexpensewebapp.repository.PersonRepository;
+import com.example.groupexpensewebapp.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class GroupService {
 
     private final GroupRepository repository;
-    private final ExpenseRepository expenseRepository;
+    private final PersonRepository personRepository;
+    private final UserRepository userRepository;
     private final DebtService debtService;
+    private final ModelMapper modelMapper;
 
-    public GroupService(GroupRepository repository, ExpenseRepository expenseRepository, DebtService debtService) {
-        this.repository = repository;
-        this.expenseRepository = expenseRepository;
-        this.debtService = debtService;
+    public List<GroupSummary> getGroupsForUser(String username) {
+        return repository.findAllGroupsForUser(username).stream()
+                .map(g -> modelMapper.map(g, GroupSummary.class))
+                .collect(Collectors.toList());
     }
 
-    public List<GroupSummary> getGroupsForUser(long userId) {
-        List<GroupSummary> groupSummaries = new ArrayList<>();
-
-        for (Group g : repository.findAll()) {
-            groupSummaries.add(mapToGroupSummary(g));
-        }
-
-        return groupSummaries;
-    }
-
-    public GroupSummary addGroup(GroupInput input) {
+    public GroupSummary addGroup(GroupInput input, String creatorUsername) {
         if (input.getName() == null || input.getDescription() == null) {
             throw new IllegalArgumentException();
         }
 
+        UserEntity creator = userRepository.findByName(creatorUsername);
+
         Group group = new Group();
         group.setName(input.getName());
         group.setDescription(input.getDescription());
-        long currentTime = System.currentTimeMillis();
-        group.setTimeCreated(currentTime);
+        group.setTimeCreated(System.currentTimeMillis());
+        group.setCreator(creator);
+
+        Person person = new Person();
+        person.setName(creatorUsername);
+        person.setRelatedUser(creator);
+        person.setGroup(group);
+        group.setPersons(Collections.singletonList(person));
 
         Group addedGroup = repository.save(group);
-        return mapToGroupSummary(addedGroup);
+        return modelMapper.map(addedGroup, GroupSummary.class);
     }
 
-    public GroupSummary editGroup(long groupId, GroupInput input) {
+    public GroupSummary editGroup(long groupId, GroupInput input, String username) {
+        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new IllegalArgumentException("brak praw do edycji"); // docelowo inny wyjątek
+        }
+
         if (input.getName() == null || input.getDescription() == null) {
             throw new IllegalArgumentException();
         }
@@ -63,21 +69,33 @@ public class GroupService {
         group.setDescription(input.getDescription());
 
         repository.save(group);
-        return mapToGroupSummary(group);
+        return modelMapper.map(group, GroupSummary.class);
     }
 
-    public void deleteGroup(long groupId) {
+    public void deleteGroup(long groupId, String username) {
+        if (!repository.existsByIdAndCreator_Name(groupId, username)) {
+            throw new IllegalArgumentException("brak praw do usuwania"); // docelowo inny wyjątek
+        }
+
         repository.deleteById(groupId);
     }
 
-    public GroupDetails getGroupDetails(long groupId) {
+    public GroupDetails getGroupDetails(long groupId, String username) {
+        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new IllegalArgumentException("brak praw do wyswietlania"); // docelowo inny wyjątek
+        }
+
         Group group = repository.findById(groupId)
                 .orElseThrow(IllegalArgumentException::new);
-        return mapToGroupDetails(group);
+
+        return modelMapper.map(group, GroupDetails.class);
     }
 
     public Object calculateDebtsForGroup(long groupId) {
-        Iterable<Expense> expenses = expenseRepository.findAllByGroup_Id(groupId);
+        Group group = repository.findById(groupId)
+                .orElseThrow(IllegalArgumentException::new);
+        Iterable<Expense> expenses = group.getExpenses();
+
         ModelMapper modelMapper = new ModelMapper();
         List<ExpenseDetails> expenseList = new ArrayList<>();
         for (Expense expense : expenses) {
@@ -88,13 +106,4 @@ public class GroupService {
         //return debtService.calculateBalances(expenses);
     }
 
-    private GroupSummary mapToGroupSummary(Group group) {
-        ModelMapper modelMapper = new ModelMapper();
-        return modelMapper.map(group, GroupSummary.class);
-    }
-
-    private GroupDetails mapToGroupDetails(Group group) {
-        ModelMapper modelMapper = new ModelMapper();
-        return modelMapper.map(group, GroupDetails.class);
-    }
 }

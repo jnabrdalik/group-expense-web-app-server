@@ -25,7 +25,7 @@ public class Person {
 
     @ManyToOne
     @JoinColumn
-    private User relatedUser;
+    private UserEntity relatedUser;
 
     @OneToMany(mappedBy = "payer")
     private Set<Expense> expensesPaidFor;
