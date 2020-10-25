@@ -1,7 +1,6 @@
 package com.example.groupexpensewebapp.service;
 
 import com.example.groupexpensewebapp.dto.*;
-import com.example.groupexpensewebapp.model.Expense;
 import com.example.groupexpensewebapp.model.Group;
 import com.example.groupexpensewebapp.model.Person;
 import com.example.groupexpensewebapp.model.UserEntity;
@@ -10,7 +9,9 @@ import com.example.groupexpensewebapp.repository.PersonRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ public class GroupService {
 
     public GroupSummary addGroup(GroupInput input, String creatorUsername) {
         if (input.getName() == null || input.getDescription() == null) {
-            throw new IllegalArgumentException();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         UserEntity creator = userRepository.findByName(creatorUsername);
@@ -55,12 +56,12 @@ public class GroupService {
     }
 
     public GroupSummary editGroup(long groupId, GroupInput input, String username) {
-        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
-            throw new IllegalArgumentException("brak praw do edycji"); // docelowo inny wyjątek
+        if (!repository.existsByIdAndCreator_Name(groupId, username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         if (input.getName() == null || input.getDescription() == null) {
-            throw new IllegalArgumentException();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         Group group = repository.findById(groupId)
@@ -74,36 +75,32 @@ public class GroupService {
 
     public void deleteGroup(long groupId, String username) {
         if (!repository.existsByIdAndCreator_Name(groupId, username)) {
-            throw new IllegalArgumentException("brak praw do usuwania"); // docelowo inny wyjątek
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         repository.deleteById(groupId);
     }
 
     public GroupDetails getGroupDetails(long groupId, String username) {
-        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
-            throw new IllegalArgumentException("brak praw do wyswietlania"); // docelowo inny wyjątek
-        }
-
         Group group = repository.findById(groupId)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         return modelMapper.map(group, GroupDetails.class);
     }
 
-    public Object calculateDebtsForGroup(long groupId) {
+    public List<Debt> calculateDebtsForGroup(long groupId, String username) {
         Group group = repository.findById(groupId)
-                .orElseThrow(IllegalArgumentException::new);
-        Iterable<Expense> expenses = group.getExpenses();
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        ModelMapper modelMapper = new ModelMapper();
-        List<ExpenseDetails> expenseList = new ArrayList<>();
-        for (Expense expense : expenses) {
-            expenseList.add(modelMapper.map(expense, ExpenseDetails.class));
+        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        return debtService.calculateDebts(expenses);
-        //return debtService.calculateBalances(expenses);
+        return debtService.calculateDebts(group.getExpenses());
     }
 
 }

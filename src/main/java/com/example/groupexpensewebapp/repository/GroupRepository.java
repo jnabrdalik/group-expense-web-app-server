@@ -11,8 +11,8 @@ public interface GroupRepository extends CrudRepository<Group, Long> {
 
     @Query(value =
             "select g from Group g join " +
-            "Person p on g.id = p.group.id join " +
-            "UserEntity u on p.relatedUser.id = u.id where u.name = :name")
+            "Person p on g.id = p.group.id " +
+            "where p.relatedUser.name = :name")
     List<Group> findAllGroupsForUser(@Param("name") String name);
 
     boolean existsByIdAndCreator_Name(long id, String creatorName);

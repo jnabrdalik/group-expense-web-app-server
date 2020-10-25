@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.persistence.*;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "expenses")
@@ -36,6 +36,6 @@ public class Expense {
             joinColumns = @JoinColumn(name = "expense_id"),
             inverseJoinColumns = @JoinColumn(name = "person_id")
     )
-    private Set<Person> peopleInvolved;
+    private List<Person> peopleInvolved;
 
 }

@@ -2,7 +2,7 @@ package com.example.groupexpensewebapp.dto;
 
 import lombok.Data;
 
-import java.util.Set;
+import java.util.List;
 
 @Data
 public class ExpenseInput {
@@ -11,6 +11,6 @@ public class ExpenseInput {
     private String description;
     private long groupId;
     private long payerId;
-    private Set<Long> peopleInvolvedIds;
+    private List<Long> peopleInvolvedIds;
 
 }

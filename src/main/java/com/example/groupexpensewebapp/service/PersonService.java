@@ -10,7 +10,9 @@ import com.example.groupexpensewebapp.repository.GroupRepository;
 import com.example.groupexpensewebapp.repository.PersonRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class PersonService {
@@ -27,20 +29,29 @@ public class PersonService {
         this.modelMapper = modelMapper;
     }
 
-    public PersonDetails getPersonDetails(long personId) {
+    public PersonDetails getPersonDetails(long personId, String username) {
         Person person = repository.findById(personId)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        long groupId = person.getGroup().getId();
+        if (!repository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         return modelMapper.map(person, PersonDetails.class);
     }
 
-    public PersonSummary addPerson(PersonInput input) {
-        if (input.getName() == null) {
-            throw new IllegalArgumentException();
+    public PersonSummary addPerson(PersonInput input, String username) {
+        if (!repository.existsByRelatedUserName_AndGroup_Id(username, input.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
+        if (input.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        
         Group group = groupRepository.findById(input.getGroupId())
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         Person person = new Person();
         person.setName(input.getName());
@@ -49,7 +60,11 @@ public class PersonService {
         long relatedUserId = input.getRelatedUserId();
         if (relatedUserId != 0) {
             UserEntity relatedUser = userRepository.findById(relatedUserId)
-                    .orElseThrow(IllegalArgumentException::new);
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+
+            if (repository.existsByRelatedUserName_AndGroup_Id(relatedUser.getName(), group.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already belongs to group!");
+            }
 
             person.setRelatedUser(relatedUser);
             person.setName(relatedUser.getName());
@@ -59,13 +74,18 @@ public class PersonService {
         return modelMapper.map(addedPerson, PersonSummary.class);
     }
 
-    public PersonSummary editPerson(long personId, PersonInput input) {
-        if (input.getName() == null) {
-            throw new IllegalArgumentException();
+    public PersonSummary editPerson(long personId, PersonInput input, String username) {
+        Person person = repository.findById(personId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        long groupId = person.getGroup().getId();
+        if (!repository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        Person person = repository.findById(personId)
-                .orElseThrow(IllegalArgumentException::new);
+        if (input.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
 
         person.setName(input.getName());
 
@@ -73,9 +93,20 @@ public class PersonService {
         return modelMapper.map(person, PersonSummary.class);
     }
 
-    public void deletePerson(long personId) {
+    public void deletePerson(long personId, String username) {
+        Person person = repository.findById(personId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        long groupId = person.getGroup().getId();
+        if (!repository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        UserEntity relatedUser = person.getRelatedUser();
+        if (relatedUser != null && groupRepository.existsByIdAndCreator_Name(groupId, relatedUser.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete group creator!");
+        }
+
         repository.deleteById(personId);
     }
-
-
 }

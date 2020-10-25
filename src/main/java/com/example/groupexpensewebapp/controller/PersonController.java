@@ -4,35 +4,35 @@ import com.example.groupexpensewebapp.dto.PersonDetails;
 import com.example.groupexpensewebapp.dto.PersonInput;
 import com.example.groupexpensewebapp.dto.PersonSummary;
 import com.example.groupexpensewebapp.service.PersonService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RestController
-@RequestMapping("/person")
+@RequestMapping("/api/person")
+@RequiredArgsConstructor
 public class PersonController {
 
     private final PersonService personService;
 
-    public PersonController(PersonService personService) {
-        this.personService = personService;
-    }
-
     @GetMapping("/{id}")
-    public PersonDetails getPerson(@PathVariable long id) {
-        return personService.getPersonDetails(id);
+    public PersonDetails getPerson(@PathVariable long id, Principal principal) {
+        return personService.getPersonDetails(id, principal.getName());
     }
 
     @PostMapping
-    public PersonSummary addPerson(@RequestBody PersonInput input) {
-        return personService.addPerson(input);
+    public PersonSummary addPerson(@RequestBody PersonInput input, Principal principal) {
+        return personService.addPerson(input, principal.getName());
     }
 
     @PutMapping("/{id}")
-    public PersonSummary editPerson(@PathVariable long id, @RequestBody PersonInput input) {
-        return personService.editPerson(id, input);
+    public PersonSummary editPerson(@PathVariable long id, @RequestBody PersonInput input, Principal principal) {
+        return personService.editPerson(id, input, principal.getName());
     }
 
     @DeleteMapping("/{id}")
-    public void deletePerson(@PathVariable long id) {
-        personService.deletePerson(id);
+    public void deletePerson(@PathVariable long id, Principal principal) {
+        personService.deletePerson(id, principal.getName());
     }
 }

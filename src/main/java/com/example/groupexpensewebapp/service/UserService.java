@@ -6,12 +6,14 @@ import com.example.groupexpensewebapp.model.UserEntity;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,12 +39,16 @@ public class UserService implements UserDetailsService {
     }
 
     public boolean checkIfUserExists(String username) {
+        if (username.length() < 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
         return repository.existsByName(username);
     }
 
     public void addUser(UserInput input) {
-        if (repository.existsByName(input.getName())) {
-            throw new IllegalArgumentException();
+        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         UserEntity user = new UserEntity();
@@ -56,7 +62,7 @@ public class UserService implements UserDetailsService {
 
     public List<UserSummary> findUsers(String query) {
         if (query.length() < 3) {
-            throw new IllegalArgumentException();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         List<UserEntity> users = repository.findByNameContainingIgnoreCase(query);

@@ -11,7 +11,7 @@ public class GroupDetails {
     private String name;
     private String description;
     private long timeCreated;
-    private String creatorUsername;
+    private String creatorUserName;
     private List<ExpenseDetails> expenses;
     private List<PersonSummary> persons;
 

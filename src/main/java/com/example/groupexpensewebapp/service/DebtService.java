@@ -4,13 +4,17 @@ import com.example.groupexpensewebapp.dto.Debt;
 import com.example.groupexpensewebapp.dto.PersonSummary;
 import com.example.groupexpensewebapp.model.Expense;
 import com.example.groupexpensewebapp.model.Person;
+import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
+@AllArgsConstructor
 public class DebtService {
+
+    private final ModelMapper modelMapper;
 
     List<Debt> calculateDebts(Iterable<Expense> expenses) {
         List<Debt> debts = new ArrayList<>();
@@ -41,7 +45,6 @@ public class DebtService {
             }
         }
 
-        ModelMapper modelMapper = new ModelMapper();
         for (Map.Entry<Person, HashMap<Person, Integer>> debtorEntry : personIdsToAmountMapping.entrySet()) {
             Person debtor = debtorEntry.getKey();
             PersonSummary debtorSummary = modelMapper.map(debtor, PersonSummary.class);
@@ -66,7 +69,7 @@ public class DebtService {
         HashMap<Long, Integer> balances = new HashMap<>();
         for (Expense expense : expenses) {
             int amount = expense.getAmount();
-            Set<Person> peopleInvolved = expense.getPeopleInvolved();
+            List<Person> peopleInvolved = expense.getPeopleInvolved();
             int amountPerPerson = amount / peopleInvolved.size();
             Person payer = expense.getPayer();
 

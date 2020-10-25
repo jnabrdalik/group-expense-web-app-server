@@ -3,19 +3,17 @@ package com.example.groupexpensewebapp.controller;
 import com.example.groupexpensewebapp.dto.UserInput;
 import com.example.groupexpensewebapp.dto.UserSummary;
 import com.example.groupexpensewebapp.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     @PostMapping("/sign-up")
     public void signUp(@RequestBody UserInput userInput) {
