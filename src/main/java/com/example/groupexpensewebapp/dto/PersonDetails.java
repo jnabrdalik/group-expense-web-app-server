@@ -9,7 +9,7 @@ public class PersonDetails {
 
     private long id;
     private String name;
-    private long relatedUserId;
-    private List<ExpenseSummary> expensesPaidFor;
+    private String relatedUserName;
+    private int balance;
 
 }

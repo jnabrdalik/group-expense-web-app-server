@@ -42,6 +42,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.POST, LOGIN_URL).permitAll()
                 .antMatchers(HttpMethod.POST, SIGN_UP_URL).permitAll()
                 .antMatchers(HttpMethod.GET, CHECK_USER_EXISTS_URL).permitAll()
+                .antMatchers(HttpMethod.GET, GROUP_DETAILS_URL).permitAll()
+                .antMatchers(HttpMethod.GET, GROUP_DEBTS_URL).permitAll()
+                .antMatchers(HttpMethod.GET, EXPENSE_HISTORY_URL).permitAll()
+                .antMatchers(HttpMethod.POST, USER_INVITE_URL).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilter(new JwtAuthenticationFilter(authenticationManager(), LOGIN_URL))
@@ -55,7 +59,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.applyPermitDefaultValues();
         corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
         source.registerCorsConfiguration("/**", corsConfiguration);
         return source;
     }

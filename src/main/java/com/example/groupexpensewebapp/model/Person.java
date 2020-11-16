@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -30,6 +31,17 @@ public class Person {
     @OneToMany(mappedBy = "payer")
     private Set<Expense> expensesPaidFor;
 
-    @ManyToMany(mappedBy = "peopleInvolved")
+    @ManyToMany(mappedBy = "payees")
     private Set<Expense> expensesInvolvedIn;
+
+    @ManyToMany(mappedBy = "payees")
+    private Set<ExpenseHistory> expensesInvolvedInHistory;
+
+    @OneToMany(mappedBy = "createdBy")
+    private List<Expense> expensesCreated;
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

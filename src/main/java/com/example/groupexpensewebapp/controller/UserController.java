@@ -6,6 +6,7 @@ import com.example.groupexpensewebapp.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -16,8 +17,11 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/sign-up")
-    public void signUp(@RequestBody UserInput userInput) {
-        userService.addUser(userInput);
+    public UserSummary signUp(@RequestBody UserInput userInput, @RequestParam(name = "invite") long personId) {
+        if (personId != 0) {
+            return userService.addUserFromInviteLink(personId, userInput);
+        }
+        return userService.addUser(userInput);
     }
 
     @GetMapping("/{username}/exists")
@@ -26,7 +30,7 @@ public class UserController {
     }
 
     @GetMapping("/{query}/find")
-    public List<UserSummary> findUsers(@PathVariable String query) {
-        return this.userService.findUsers(query);
+    public List<UserSummary> findUsers(@PathVariable String query, Principal principal) {
+        return this.userService.findUsers(query, principal.getName());
     }
 }

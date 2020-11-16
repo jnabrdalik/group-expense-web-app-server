@@ -9,10 +9,10 @@ public class GroupDetails {
 
     private long id;
     private String name;
-    private String description;
     private long timeCreated;
+    private boolean registeredOnly;
     private String creatorUserName;
     private List<ExpenseDetails> expenses;
-    private List<PersonSummary> persons;
+    private List<PersonDetails> persons;
 
 }

@@ -40,17 +40,11 @@ public class GroupController {
 
     @GetMapping("/{id}")
     public GroupDetails getGroupDetails(@PathVariable long id, Principal principal) {
-        return groupService.getGroupDetails(id, principal.getName());
+        return groupService.getGroupDetails(id, principal != null ? principal.getName() : null);
     }
 
     @GetMapping("/{id}/debts")
     public List<Debt> getDebts(@PathVariable long id, Principal principal) {
-        return groupService.calculateDebtsForGroup(id, principal.getName());
+        return groupService.getDebtsForGroup(id, principal != null ? principal.getName() : null);
     }
-
-    @GetMapping("/test")
-    public Object test(Principal principal) {
-        return principal.getClass();
-    }
-
 }

@@ -33,7 +33,7 @@ public class GroupService {
     }
 
     public GroupSummary addGroup(GroupInput input, String creatorUsername) {
-        if (input.getName() == null || input.getDescription() == null) {
+        if (input.getName() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
@@ -41,7 +41,7 @@ public class GroupService {
 
         Group group = new Group();
         group.setName(input.getName());
-        group.setDescription(input.getDescription());
+        group.setRegisteredOnly(input.isRegisteredOnly());
         group.setTimeCreated(System.currentTimeMillis());
         group.setCreator(creator);
 
@@ -56,18 +56,19 @@ public class GroupService {
     }
 
     public GroupSummary editGroup(long groupId, GroupInput input, String username) {
-        if (!repository.existsByIdAndCreator_Name(groupId, username)) {
+        Group group = repository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!group.getCreator().getName().equals(username)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        if (input.getName() == null || input.getDescription() == null) {
+        if (input.getName() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        Group group = repository.findById(groupId)
-                .orElseThrow(IllegalArgumentException::new);
         group.setName(input.getName());
-        group.setDescription(input.getDescription());
+        group.setRegisteredOnly(input.isRegisteredOnly());
 
         repository.save(group);
         return modelMapper.map(group, GroupSummary.class);
@@ -85,22 +86,27 @@ public class GroupService {
         Group group = repository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+        if (group.isRegisteredOnly() && !personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        return modelMapper.map(group, GroupDetails.class);
+        Map<Long, Integer> balances = debtService.getBalances(group.getExpenses());
+        GroupDetails groupDetails = modelMapper.map(group, GroupDetails.class);
+        groupDetails.getPersons().forEach(person ->
+                person.setBalance(balances.getOrDefault(person.getId(), 0)));
+
+        return groupDetails;
     }
 
-    public List<Debt> calculateDebtsForGroup(long groupId, String username) {
+    public List<Debt> getDebtsForGroup(long groupId, String username) {
         Group group = repository.findById(groupId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+        if (group.isRegisteredOnly() && !personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        return debtService.calculateDebts(group.getExpenses());
+        return debtService.getDebts(group.getExpenses());
     }
 
 }

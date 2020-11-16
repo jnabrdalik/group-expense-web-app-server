@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 
 import javax.persistence.*;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "expenses")
@@ -21,21 +22,36 @@ public class Expense {
 
     private int amount;
 
-    private long timeAdded;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn
-    private Group group;
+    private long timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
     private Person payer;
 
     @ManyToMany
-    @JoinTable(name = "persons_expenses",
+    @JoinTable(name = "expenses_persons",
             joinColumns = @JoinColumn(name = "expense_id"),
             inverseJoinColumns = @JoinColumn(name = "person_id")
     )
-    private List<Person> peopleInvolved;
+    private Set<Person> payees;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn
+    private Group group;
+
+    private long createdTime;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn
+    private Person createdBy;
+
+    private long lastEditTime;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn
+    private Person lastEditedBy;
+
+    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL)
+    private List<ExpenseHistory> history;
 
 }

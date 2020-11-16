@@ -2,7 +2,9 @@ package com.example.groupexpensewebapp.service;
 
 import com.example.groupexpensewebapp.dto.UserInput;
 import com.example.groupexpensewebapp.dto.UserSummary;
+import com.example.groupexpensewebapp.model.Person;
 import com.example.groupexpensewebapp.model.UserEntity;
+import com.example.groupexpensewebapp.repository.PersonRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class UserService implements UserDetailsService {
 
     private final UserRepository repository;
+    private final PersonRepository personRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final ModelMapper modelMapper;
 
@@ -46,7 +49,7 @@ public class UserService implements UserDetailsService {
         return repository.existsByName(username);
     }
 
-    public void addUser(UserInput input) {
+    public UserSummary addUser(UserInput input) {
         if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -57,10 +60,11 @@ public class UserService implements UserDetailsService {
         String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
         user.setPassword(encodedPassword);
 
-        repository.save(user);
+        UserEntity savedUser = repository.save(user);
+        return modelMapper.map(savedUser, UserSummary.class);
     }
 
-    public List<UserSummary> findUsers(String query) {
+    public List<UserSummary> findUsers(String query, String username) {
         if (query.length() < 3) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -68,7 +72,30 @@ public class UserService implements UserDetailsService {
         List<UserEntity> users = repository.findByNameContainingIgnoreCase(query);
 
         return users.stream()
+                .filter(user -> !user.getName().equals(username))
                 .map(user -> modelMapper.map(user, UserSummary.class))
                 .collect(Collectors.toList());
+    }
+
+    public UserSummary addUserFromInviteLink(long personId, UserInput input) {
+        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        UserEntity user = person.getRelatedUser();
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        user.setName(input.getName());
+        String rawPassword = input.getPassword();
+        String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
+        user.setPassword(encodedPassword);
+
+        repository.save(user);
+        return modelMapper.map(user, UserSummary.class);
     }
 }

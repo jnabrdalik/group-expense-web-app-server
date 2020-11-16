@@ -16,7 +16,7 @@ public class DebtService {
 
     private final ModelMapper modelMapper;
 
-    List<Debt> calculateDebts(Iterable<Expense> expenses) {
+    List<Debt> getDebts(Iterable<Expense> expenses) {
         List<Debt> debts = new ArrayList<>();
 
         HashMap<Person, HashMap<Person, Integer>> personIdsToAmountMapping = new HashMap<>();
@@ -24,9 +24,9 @@ public class DebtService {
         for (Expense expense : expenses) {
             Person payer = expense.getPayer();
             long payerId = payer.getId();
-            int amountPerPerson = expense.getAmount() / expense.getPeopleInvolved().size();
+            int amountPerPerson = expense.getAmount() / expense.getPayees().size();
 
-            for (Person personInvolved : expense.getPeopleInvolved()) {
+            for (Person personInvolved : expense.getPayees()) {
 
                 long personInvolvedId = personInvolved.getId();
 
@@ -65,20 +65,20 @@ public class DebtService {
         return debts;
     }
 
-    Map<Long, Integer> calculateBalances(Iterable<Expense> expenses) {
+    Map<Long, Integer> getBalances(Iterable<Expense> expenses) {
         HashMap<Long, Integer> balances = new HashMap<>();
         for (Expense expense : expenses) {
             int amount = expense.getAmount();
-            List<Person> peopleInvolved = expense.getPeopleInvolved();
-            int amountPerPerson = amount / peopleInvolved.size();
+            Set<Person> payees = expense.getPayees();
+            int amountPerPerson = amount / payees.size();
             Person payer = expense.getPayer();
 
-            int amountPaidForOthers = peopleInvolved.contains(payer) ? amount - amountPerPerson : amount;
+            int amountPaidForOthers = payees.contains(payer) ? amount - amountPerPerson : amount;
             balances.compute(payer.getId(), (k, v) -> v == null ? amountPaidForOthers : v + amountPaidForOthers);
 
-            for (Person personInvolved : peopleInvolved) {
-                if (personInvolved.getId() != payer.getId())
-                    balances.compute(personInvolved.getId(), (k, v) -> v == null ? - amountPerPerson : v - amountPerPerson);
+            for (Person payee : payees) {
+                if (payee.getId() != payer.getId())
+                    balances.compute(payee.getId(), (k, v) -> v == null ? - amountPerPerson : v - amountPerPerson);
             }
         }
 

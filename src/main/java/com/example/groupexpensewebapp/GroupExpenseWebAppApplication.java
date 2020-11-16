@@ -22,5 +22,4 @@ public class GroupExpenseWebAppApplication {
 	public ModelMapper modelMapper() {
 		return new ModelMapper();
 	}
-
 }

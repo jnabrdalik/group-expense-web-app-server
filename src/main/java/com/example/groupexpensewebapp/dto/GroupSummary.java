@@ -7,7 +7,7 @@ public class GroupSummary {
 
     private long id;
     private String name;
-    private String description;
     private long timeCreated;
     private String creatorUserName;
+    private boolean registeredOnly;
 }

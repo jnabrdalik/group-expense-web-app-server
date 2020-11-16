@@ -35,4 +35,9 @@ public class PersonController {
     public void deletePerson(@PathVariable long id, Principal principal) {
         personService.deletePerson(id, principal.getName());
     }
+
+    @PostMapping("/{id}/invite")
+    public void inviteUser(@PathVariable long id, @RequestBody String email) {
+        personService.sendInvite(id, email, null);
+    }
 }

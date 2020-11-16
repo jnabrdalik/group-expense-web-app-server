@@ -10,8 +10,9 @@ public class ExpenseDetails {
     private long id;
     private String description;
     private int amount;
-    private long timeAdded;
+    private long timestamp;
+    private PersonSummary createdBy;
     private PersonSummary payer;
-    private Set<PersonSummary> peopleInvolved;
+    private Set<PersonSummary> payees;
 
 }

@@ -9,25 +9,21 @@ import com.example.groupexpensewebapp.model.UserEntity;
 import com.example.groupexpensewebapp.repository.GroupRepository;
 import com.example.groupexpensewebapp.repository.PersonRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class PersonService {
 
     private final PersonRepository repository;
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
-
-    public PersonService(PersonRepository repository, GroupRepository groupRepository, UserRepository userRepository, ModelMapper modelMapper) {
-        this.repository = repository;
-        this.groupRepository = groupRepository;
-        this.userRepository = userRepository;
-        this.modelMapper = modelMapper;
-    }
+    private final MailService mailService;
 
     public PersonDetails getPersonDetails(long personId, String username) {
         Person person = repository.findById(personId)
@@ -63,7 +59,7 @@ public class PersonService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
             if (repository.existsByRelatedUserName_AndGroup_Id(relatedUser.getName(), group.getId())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already belongs to group!");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is already in this group!");
             }
 
             person.setRelatedUser(relatedUser);
@@ -108,5 +104,29 @@ public class PersonService {
         }
 
         repository.deleteById(personId);
+    }
+
+    public void sendInvite(long personId, String email, String username) {
+        if (!mailService.isEmailValid(email)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        Person person = repository.findById(personId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        long groupId = person.getGroup().getId();
+//        if (!repository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
+//            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+//        }
+
+        UserEntity user = new UserEntity();
+        userRepository.save(user);
+
+        person.setRelatedUser(user);
+        repository.save(person);
+
+        mailService.sendMessage(email, "Zaproszenie do aplikacji", "Cześć, " + person.getName() +
+                "! Zapraszam cię do grupy " + person.getGroup().getName() + ". Aby się zarejestrować, kliknij " +
+                "w poniższy link:\n" + "http://localhost:4200/sign-up/invite/" + personId);
     }
 }

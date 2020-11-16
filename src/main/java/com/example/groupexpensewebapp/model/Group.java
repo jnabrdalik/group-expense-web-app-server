@@ -16,9 +16,9 @@ public class Group {
 
     private String name;
 
-    private String description;
-
     private long timeCreated;
+
+    private boolean registeredOnly;
 
     @ManyToOne
     private UserEntity creator;
