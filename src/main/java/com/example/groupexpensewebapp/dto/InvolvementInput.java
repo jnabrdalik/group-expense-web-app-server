@@ -5,10 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class Debt {
-
-    private MemberSummary debtor;
-    private MemberSummary creditor;
-    private int amount;
-
+public class InvolvementInput {
+    private long payeeId;
+    private int weight;
 }

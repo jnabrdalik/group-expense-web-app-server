@@ -1,10 +1,11 @@
 package com.example.groupexpensewebapp.service;
 
+import com.example.groupexpensewebapp.dto.DebtNotificationInput;
 import com.example.groupexpensewebapp.dto.UserInput;
 import com.example.groupexpensewebapp.dto.UserSummary;
-import com.example.groupexpensewebapp.model.Person;
+import com.example.groupexpensewebapp.model.Member;
 import com.example.groupexpensewebapp.model.UserEntity;
-import com.example.groupexpensewebapp.repository.PersonRepository;
+import com.example.groupexpensewebapp.repository.MemberRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -25,14 +26,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
-    private final UserRepository repository;
-    private final PersonRepository personRepository;
+    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
+    private final MailService mailService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final ModelMapper modelMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntity user = repository.findByName(username);
+        UserEntity user = userRepository.findByName(username);
 
         if (user == null) {
             throw new UsernameNotFoundException(username);
@@ -46,22 +48,31 @@ public class UserService implements UserDetailsService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        return repository.existsByName(username);
+        return userRepository.existsByName(username);
     }
 
     public UserSummary addUser(UserInput input) {
-        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
+        if (input.getName() == null || input.getPassword() == null || input.getEmail() == null ||
+                userRepository.existsByName(input.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         UserEntity user = new UserEntity();
         user.setName(input.getName());
+        user.setEmail(input.getEmail());
         String rawPassword = input.getPassword();
         String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
         user.setPassword(encodedPassword);
 
-        UserEntity savedUser = repository.save(user);
+        UserEntity savedUser = userRepository.save(user);
         return modelMapper.map(savedUser, UserSummary.class);
+    }
+
+    public void changePassword(String newPassword, String username) {
+        UserEntity user = userRepository.findByName(username);
+        user.setPassword(bCryptPasswordEncoder.encode(newPassword));
+
+        userRepository.save(user);
     }
 
     public List<UserSummary> findUsers(String query, String username) {
@@ -69,33 +80,11 @@ public class UserService implements UserDetailsService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        List<UserEntity> users = repository.findByNameContainingIgnoreCase(query);
+        List<UserEntity> users = userRepository.findByNameContainingIgnoreCase(query);
 
         return users.stream()
                 .filter(user -> !user.getName().equals(username))
                 .map(user -> modelMapper.map(user, UserSummary.class))
                 .collect(Collectors.toList());
-    }
-
-    public UserSummary addUserFromInviteLink(long personId, UserInput input) {
-        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-
-        Person person = personRepository.findById(personId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        UserEntity user = person.getRelatedUser();
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-
-        user.setName(input.getName());
-        String rawPassword = input.getPassword();
-        String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
-        user.setPassword(encodedPassword);
-
-        repository.save(user);
-        return modelMapper.map(user, UserSummary.class);
     }
 }

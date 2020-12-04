@@ -18,13 +18,15 @@ public class Group {
 
     private long timeCreated;
 
-    private boolean registeredOnly;
+    private boolean forRegisteredOnly;
+
+    private boolean archived;
 
     @ManyToOne
     private UserEntity creator;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
-    private List<Person> persons;
+    private List<Member> members;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
     private List<Expense> expenses;

@@ -6,6 +6,6 @@ import lombok.Data;
 public class GroupInput {
 
     private String name;
-    private boolean registeredOnly;
+    private boolean forRegisteredOnly;
 
 }

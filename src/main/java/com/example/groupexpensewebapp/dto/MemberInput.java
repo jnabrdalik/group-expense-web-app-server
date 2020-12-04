@@ -3,10 +3,10 @@ package com.example.groupexpensewebapp.dto;
 import lombok.Data;
 
 @Data
-public class PersonInput {
+public class MemberInput {
 
     private String name;
     private long groupId;
-    private long relatedUserId;
+    private String relatedUserName;
 
 }

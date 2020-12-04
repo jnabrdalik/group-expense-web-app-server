@@ -9,5 +9,6 @@ public class GroupSummary {
     private String name;
     private long timeCreated;
     private String creatorUserName;
-    private boolean registeredOnly;
+    private boolean forRegisteredOnly;
+    private boolean archived;
 }

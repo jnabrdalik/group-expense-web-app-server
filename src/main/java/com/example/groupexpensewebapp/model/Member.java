@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "persons")
+@Table(name = "members")
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Person {
+public class Member {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -31,14 +31,17 @@ public class Person {
     @OneToMany(mappedBy = "payer")
     private Set<Expense> expensesPaidFor;
 
-    @ManyToMany(mappedBy = "payees")
-    private Set<Expense> expensesInvolvedIn;
+//    @ManyToMany(mappedBy = "payees")
+//    private Set<Expense> expensesInvolvedIn;
+//
+//    @ManyToMany(mappedBy = "payees")
+//    private Set<ExpenseHistory> expensesInvolvedInHistory;
 
-    @ManyToMany(mappedBy = "payees")
-    private Set<ExpenseHistory> expensesInvolvedInHistory;
+    @OneToMany(mappedBy = "payee")
+    private Set<Involvement> involvements;
 
-    @OneToMany(mappedBy = "createdBy")
-    private List<Expense> expensesCreated;
+    @OneToMany(mappedBy = "payee")
+    private Set<InvolvementHistory> involvementsHistory;
 
     @Override
     public String toString() {

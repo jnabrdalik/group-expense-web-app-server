@@ -17,10 +17,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/sign-up")
-    public UserSummary signUp(@RequestBody UserInput userInput, @RequestParam(name = "invite") long personId) {
-        if (personId != 0) {
-            return userService.addUserFromInviteLink(personId, userInput);
-        }
+    public UserSummary signUp(@RequestBody UserInput userInput) {
         return userService.addUser(userInput);
     }
 
@@ -31,6 +28,11 @@ public class UserController {
 
     @GetMapping("/{query}/find")
     public List<UserSummary> findUsers(@PathVariable String query, Principal principal) {
-        return this.userService.findUsers(query, principal.getName());
+        return userService.findUsers(query, principal.getName());
+    }
+
+    @PutMapping("/password")
+    public void changePassword(@RequestBody String newPassword, Principal principal) {
+        userService.changePassword(newPassword, principal.getName());
     }
 }

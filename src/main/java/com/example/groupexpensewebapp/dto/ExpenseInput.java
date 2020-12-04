@@ -12,6 +12,6 @@ public class ExpenseInput {
     private long timestamp;
     private long groupId;
     private long payerId;
-    private Set<Long> payeesIds;
+    private Set<InvolvementInput> involvements;
 
 }

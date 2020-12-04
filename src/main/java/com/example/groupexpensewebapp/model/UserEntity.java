@@ -18,6 +18,8 @@ public class UserEntity {
 
     private String password;
 
+    private String email;
+
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL)
     private List<Group> createdGroups;
 

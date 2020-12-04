@@ -11,7 +11,7 @@ public interface GroupRepository extends CrudRepository<Group, Long> {
 
     @Query(value =
             "select g from Group g join " +
-            "Person p on g.id = p.group.id " +
+            "Member p on g.id = p.group.id " +
             "where p.relatedUser.name = :name")
     List<Group> findAllGroupsForUser(@Param("name") String name);
 
