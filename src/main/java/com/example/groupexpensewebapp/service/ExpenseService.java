@@ -2,13 +2,11 @@ package com.example.groupexpensewebapp.service;
 
 import com.example.groupexpensewebapp.dto.*;
 import com.example.groupexpensewebapp.model.Expense;
-import com.example.groupexpensewebapp.model.ExpenseHistory;
 import com.example.groupexpensewebapp.model.Group;
-import com.example.groupexpensewebapp.model.Person;
-import com.example.groupexpensewebapp.repository.ExpenseHistoryRepository;
+import com.example.groupexpensewebapp.model.User;
 import com.example.groupexpensewebapp.repository.ExpenseRepository;
 import com.example.groupexpensewebapp.repository.GroupRepository;
-import com.example.groupexpensewebapp.repository.PersonRepository;
+import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -23,81 +21,65 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ExpenseService {
 
-    private final ExpenseRepository repository;
-    private final ExpenseHistoryRepository expenseHistoryRepository;
+    private final ExpenseRepository expenseRepository;
     private final GroupRepository groupRepository;
-    private final PersonRepository personRepository;
+    private final UserRepository userRepository;
     private final ModelMapper modelMapper;
 
-    public ExpenseDetails getExpenseDetails(long expenseId, String username) {
-        Expense expense = repository.findById(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        long groupId = expense.getGroup().getId();
-        if (!personRepository.existsByRelatedUserName_AndGroup_Id(username, groupId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        return modelMapper.map(expense, ExpenseDetails.class);
-    }
-
     public List<ExpenseChange> getExpenseHistory(long expenseId, String username) {
-        Expense expense = repository.findById(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense doesn't exist!"));
 
         Group group = expense.getGroup();
-        if (group.isRegisteredOnly() && !personRepository.existsByRelatedUserName_AndGroup_Id(username, group.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (group.isForRegisteredOnly() && group.getUsers().stream()
+                .noneMatch(u -> u.getName().equals(username))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't belong to this group!");
         }
 
-        ExpenseSummary currentVersion = modelMapper.map(expense, ExpenseSummary.class);
-        currentVersion.setVersionCreatedTime(expense.getCreatedTime());
-        currentVersion.setVersionCreatedBy(modelMapper.map(expense.getCreatedBy(), PersonSummary.class));
-
-        List<ExpenseSummary> history = Stream.concat(expense.getHistory().stream()
-                .map(e -> modelMapper.map(e, ExpenseSummary.class)), Stream.of(currentVersion))
-                .sorted(Comparator.comparingLong(ExpenseSummary::getVersionCreatedTime).reversed())
+        List<ExpenseDetails> history = Stream.concat(expense.getPreviousVersions().stream(), Stream.of(expense))
+                .map(e -> modelMapper.map(e, ExpenseDetails.class))
+                .sorted(Comparator.comparingLong(ExpenseDetails::getTimeCreated))
                 .collect(Collectors.toCollection(ArrayList::new));
 
         List<ExpenseChange> changes = new ArrayList<>();
         for (int i = 0; i < history.size() - 1; i++) {
-            ExpenseSummary previousVersion = history.get(i);
-            ExpenseSummary nextVersion = history.get(i + 1);
+            ExpenseDetails beforeChange = history.get(i);
+            ExpenseDetails afterChange = history.get(i + 1);
 
-            PersonSummary changedBy = modelMapper.map(nextVersion.getVersionCreatedBy(), PersonSummary.class);
-            long changeTimestamp = nextVersion.getVersionCreatedTime();
+            UserSummary changedBy = modelMapper.map(afterChange.getCreator(), UserSummary.class);
+            long changeTimestamp = afterChange.getTimeCreated();
 
             List<ExpenseChange.FieldChange> fieldChanges = new ArrayList<>();
             ExpenseChange expenseChange = new ExpenseChange(changedBy, changeTimestamp, fieldChanges);
 
-            if (previousVersion.getAmount() != nextVersion.getAmount()) {
+            if (beforeChange.getAmount() != afterChange.getAmount()) {
                 fieldChanges.add(new ExpenseChange.FieldChange( "amount",
-                        Integer.toString(previousVersion.getAmount()),
-                        Integer.toString(nextVersion.getAmount())));
+                        Integer.toString(beforeChange.getAmount()),
+                        Integer.toString(afterChange.getAmount())));
             }
 
-            if (!previousVersion.getDescription().equals(nextVersion.getDescription())) {
+            if (!beforeChange.getDescription().equals(afterChange.getDescription())) {
                 fieldChanges.add(new ExpenseChange.FieldChange("description",
-                        previousVersion.getDescription(),
-                        nextVersion.getDescription()));
+                        beforeChange.getDescription(),
+                        afterChange.getDescription()));
             }
 
-            if (previousVersion.getTimestamp() != nextVersion.getTimestamp()) {
+            if (beforeChange.getTimestamp() != afterChange.getTimestamp()) {
                 fieldChanges.add(new ExpenseChange.FieldChange("timestamp",
-                        Long.toString(previousVersion.getTimestamp()),
-                        Long.toString(nextVersion.getTimestamp())));
+                        Long.toString(beforeChange.getTimestamp()),
+                        Long.toString(afterChange.getTimestamp())));
             }
 
-            if (previousVersion.getPayer().getId() != nextVersion.getPayer().getId()) {
+            if (beforeChange.getPayer().getId() != afterChange.getPayer().getId()) {
                 fieldChanges.add(new ExpenseChange.FieldChange("payer",
-                        previousVersion.getPayer().getName(),
-                        nextVersion.getPayer().getName()));
+                        beforeChange.getPayer().getName(),
+                        afterChange.getPayer().getName()));
             }
 
-            if (!previousVersion.getPayees().equals(nextVersion.getPayees())) {
+            if (!beforeChange.getPayees().equals(afterChange.getPayees())) {
                 fieldChanges.add(new ExpenseChange.FieldChange("payees",
-                        getPayeesNames(previousVersion.getPayees()),
-                        getPayeesNames(nextVersion.getPayees())));
+                        getPayeesNames(beforeChange.getPayees()),
+                        getPayeesNames(afterChange.getPayees())));
             }
 
             changes.add(expenseChange);
@@ -106,10 +88,10 @@ public class ExpenseService {
         return changes;
     }
 
-    private String getPayeesNames(List<PersonSummary> payees) {
+    private String getPayeesNames(Set<UserSummary> payees) {
         StringBuilder sb = new StringBuilder();
         payees.stream()
-                .map(PersonSummary::getName)
+                .map(UserSummary::getName)
                 .sorted()
                 .forEachOrdered(n -> sb.append(n).append(", "));
 
@@ -118,17 +100,20 @@ public class ExpenseService {
     }
 
     public ExpenseDetails addExpense(ExpenseInput input, String username) {
-        Person createdBy = personRepository.findByRelatedUserName_AndGroup_Id(username, input.getGroupId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-
         if (input.getDescription() == null || input.getAmount() < 0 || input.getPayeesIds() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         Group group = groupRepository.findById(input.getGroupId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-        Person payer = personRepository.findById(input.getPayerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group doesn't exist!"));
+        User payer = userRepository.findById(input.getPayerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payer doesn't exist"));
+
+        User creator = userRepository.findByName(username);
+        if (group.isForRegisteredOnly() && group.getUsers().stream()
+                .noneMatch(u -> u.getName().equals(username))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         Expense expense = new Expense();
         expense.setDescription(input.getDescription());
@@ -137,110 +122,156 @@ public class ExpenseService {
         expense.setPayer(payer);
         expense.setPayees(getPayees(input));
         expense.setGroup(group);
+        expense.setTimeCreated(System.currentTimeMillis());
+        expense.setCreator(creator);
 
-        long currentTime = System.currentTimeMillis();
-        expense.setCreatedTime(currentTime);
-        expense.setCreatedBy(createdBy);
-        expense.setLastEditTime(currentTime);
-        expense.setLastEditedBy(createdBy);
-
-        Expense addedExpense = repository.save(expense);
+        Expense addedExpense = expenseRepository.save(expense);
         return modelMapper.map(addedExpense, ExpenseDetails.class);
     }
 
+    public DebtPayment addPayment(DebtPaymentInput input, String username) {
+        Group group = groupRepository.findById(input.getGroupId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group doesn't exist!"));
+
+        if (group.isForRegisteredOnly() && group.getUsers().stream()
+                .noneMatch(u -> u.getName().equals(username))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        User creator = username != null ? userRepository.findByName(username) : null;
+        User payer = userRepository.findById(input.getPayerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payer doesn't exist!"));
+        User payee = userRepository.findById(input.getPayeeId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payee doesn't exist!"));
+
+        Expense expense = new Expense();
+        expense.setAmount(input.getAmount());
+        expense.setCreator(creator);
+        expense.setPayer(payer);
+        expense.setPayees(Collections.singleton(payee));
+        expense.setGroup(group);
+        expense.setTimeCreated(System.currentTimeMillis());
+
+        Expense savedExpense = expenseRepository.save(expense);
+        DebtPayment payment = modelMapper.map(savedExpense, DebtPayment.class);
+        payment.setPayer(modelMapper.map(payer, UserSummary.class));
+        payment.setPayee(modelMapper.map(payee, UserSummary.class));
+
+        return payment;
+    }
+
     public ExpenseDetails editExpense(long expenseId, ExpenseInput input, String username) {
-        Expense expense = repository.findById(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        Group group = expense.getGroup();
-        Person editedBy = personRepository.findByRelatedUserName_AndGroup_Id(username, group.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-
-        Person payer = personRepository.findById(input.getPayerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense doesn't exist!"));
+        
         if (input.getDescription() == null || input.getAmount() < 0 || input.getPayeesIds() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        ExpenseHistory oldExpense = new ExpenseHistory();
-        oldExpense.setExpense(expense);
+        User payer = userRepository.findById(input.getPayerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+
+        Group group = expense.getGroup();
+        if (group.isForRegisteredOnly() && group.getUsers().stream()
+                .noneMatch(u -> u.getName().equals(username)) || expense.getCreator() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        User creator = userRepository.findByName(username);
+
+        Expense oldExpense = new Expense();
+        oldExpense.setOriginalExpense(expense);
         oldExpense.setDescription(expense.getDescription());
         oldExpense.setAmount(expense.getAmount());
         oldExpense.setTimestamp(expense.getTimestamp());
         oldExpense.setPayer(expense.getPayer());
         oldExpense.setPayees(Set.copyOf(expense.getPayees()));
-        oldExpense.setVersionCreatedTime(expense.getLastEditTime());
-        oldExpense.setVersionCreatedBy(expense.getLastEditedBy());
-        expenseHistoryRepository.save(oldExpense);
+        oldExpense.setCreator(expense.getCreator());
+        oldExpense.setTimeCreated(expense.getTimeCreated());
+        oldExpense.setGroup(null);
+        expenseRepository.save(oldExpense);
 
         expense.setDescription(input.getDescription());
         expense.setAmount(input.getAmount());
         expense.setTimestamp(input.getTimestamp());
+        expense.setTimeCreated(System.currentTimeMillis());
         expense.setPayer(payer);
         expense.setPayees(getPayees(input));
-        expense.setLastEditTime(System.currentTimeMillis());
-        expense.setLastEditedBy(editedBy);
-        repository.save(expense);
+        expense.setCreator(creator);
+        expenseRepository.save(expense);
 
         return modelMapper.map(expense, ExpenseDetails.class);
     }
 
-    private Set<Person> getPayees(ExpenseInput input) {
-        Set<Person> peopleInvolved = new HashSet<>();
-        Set<Long> peopleInvolvedIds = input.getPayeesIds();
-        for (Person person : personRepository.findAllById(peopleInvolvedIds)) {
-            peopleInvolved.add(person);
+    private Set<User> getPayees(ExpenseInput input) {
+        Set<User> payees = new HashSet<>();
+        Set<Long> payeesIds = input.getPayeesIds();
+        for (User user : userRepository.findAllById(payeesIds)) {
+            payees.add(user);
         }
 
-        if (peopleInvolved.size() != peopleInvolvedIds.size()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, peopleInvolved.size() + " != " + peopleInvolvedIds.size());
+        if (payees.size() != payeesIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more payees don't exist!");
         }
 
-        return peopleInvolved;
+        return payees;
     }
 
     public ExpenseDetails revertLastChange(long expenseId, String username) {
-        Expense expense = repository.findById(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense doesn't exist!"));
 
-        String lastEditorUsername = expense.getLastEditedBy().getRelatedUser().getName();
+        String lastEditorUsername = expense.getCreator().getName();
         String groupCreatorUsername = expense.getGroup().getCreator().getName();
 
-        if (!username.equals(lastEditorUsername) && !username.equals(groupCreatorUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (expense.getGroup().isForRegisteredOnly() &&
+                !username.equals(lastEditorUsername) &&
+                !username.equals(groupCreatorUsername) || expense.getCreator() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only last editor or group creator can revert changes!");
         }
 
-        ExpenseHistory previousVersion = expenseHistoryRepository.findFirstByExpense_IdOrderByTimestampDesc(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+        Expense previousVersion = expense.getPreviousVersions().stream()
+                .max(Comparator.comparingLong(Expense::getTimeCreated))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No previous versions exist!"));
 
         expense.setDescription(previousVersion.getDescription());
         expense.setAmount(previousVersion.getAmount());
         expense.setTimestamp(previousVersion.getTimestamp());
         expense.setPayer(previousVersion.getPayer());
         expense.setPayees(new HashSet<>(previousVersion.getPayees()));
-        expense.setLastEditedBy(previousVersion.getVersionCreatedBy());
-        expense.setLastEditTime(previousVersion.getVersionCreatedTime());
+        expense.setCreator(previousVersion.getCreator());
+        expense.setTimeCreated(previousVersion.getTimeCreated());
+        List<Expense> previousVersions = expense.getPreviousVersions().stream()
+                .filter(e -> e.getId() != previousVersion.getId())
+                .collect(Collectors.toList());
+        expense.setPreviousVersions(previousVersions);
 
-        repository.save(expense);
-        expenseHistoryRepository.delete(previousVersion);
+        expenseRepository.save(expense);
+        expenseRepository.delete(previousVersion);
 
         return modelMapper.map(expense, ExpenseDetails.class);
     }
 
     public void deleteExpense(long expenseId, String username) {
-        Expense expense = repository.findById(expenseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense doesn't exist!"));
 
-        if (!expense.getCreatedBy().getRelatedUser().getName().equals(username)) {
+        Group group = expense.getGroup();
+        if (group.isForRegisteredOnly() && expense.getCreator() != null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
+        
+        String groupCreatorUsername = group.getCreator().getName();
+        String originalCreatorName = expense.getPreviousVersions().stream()
+                .min(Comparator.comparingLong(Expense::getTimeCreated))
+                .orElse(expense)
+                .getCreator()
+                .getName();
 
-        repository.deleteById(expenseId);
+        if (!groupCreatorUsername.equals(username) && !originalCreatorName.equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only original creator or group creator can delete an expense!");
+        }
+
+        expenseRepository.deleteById(expenseId);
     }
-
-    private void checkIfExpenseExists(long expenseId) {
-
-    }
-
 }

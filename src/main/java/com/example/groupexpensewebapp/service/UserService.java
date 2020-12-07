@@ -2,14 +2,12 @@ package com.example.groupexpensewebapp.service;
 
 import com.example.groupexpensewebapp.dto.UserInput;
 import com.example.groupexpensewebapp.dto.UserSummary;
-import com.example.groupexpensewebapp.model.Person;
-import com.example.groupexpensewebapp.model.UserEntity;
-import com.example.groupexpensewebapp.repository.PersonRepository;
+import com.example.groupexpensewebapp.model.User;
+import com.example.groupexpensewebapp.repository.GroupRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,19 +24,21 @@ import java.util.stream.Collectors;
 public class UserService implements UserDetailsService {
 
     private final UserRepository repository;
-    private final PersonRepository personRepository;
+    private final GroupRepository groupRepository;
+    private final MailService mailService;
+    private final ExpenseService expenseService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final ModelMapper modelMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntity user = repository.findByName(username);
+        User user = repository.findByName(username);
 
         if (user == null) {
             throw new UsernameNotFoundException(username);
         }
 
-        return new User(user.getName(), user.getPassword(), Collections.emptyList());
+        return new org.springframework.security.core.userdetails.User(user.getName(), user.getPassword(), Collections.emptyList());
     }
 
     public boolean checkIfUserExists(String username) {
@@ -50,26 +50,30 @@ public class UserService implements UserDetailsService {
     }
 
     public UserSummary addUser(UserInput input) {
-        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
+        if (input.getName() == null && input.getPassword() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        UserEntity user = new UserEntity();
+        User user = new User();
         user.setName(input.getName());
         String rawPassword = input.getPassword();
         String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
         user.setPassword(encodedPassword);
 
-        UserEntity savedUser = repository.save(user);
+        User savedUser = repository.save(user);
         return modelMapper.map(savedUser, UserSummary.class);
     }
+
+//    public UserSummary addUnregisteredUser(UserInput input) {
+//
+//    }
 
     public List<UserSummary> findUsers(String query, String username) {
         if (query.length() < 3) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        List<UserEntity> users = repository.findByNameContainingIgnoreCase(query);
+        List<User> users = repository.findByNameContainingIgnoreCase(query);
 
         return users.stream()
                 .filter(user -> !user.getName().equals(username))
@@ -77,18 +81,35 @@ public class UserService implements UserDetailsService {
                 .collect(Collectors.toList());
     }
 
-    public UserSummary addUserFromInviteLink(long personId, UserInput input) {
+//    public void sendInvite(long userId, String email, String username) {
+//        if (!mailService.isEmailValid(email)) {
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+//        }
+//
+//        User user = repository.findById(userId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+//
+//        user.getGroups().stream()
+//                .anyMatch(g -> g.getUsers())
+//
+//        User user = new User();
+//        userRepository.save(user);
+//
+//        person.setRelatedUser(user);
+//        repository.save(person);
+//
+//        mailService.sendMessage(email, "Zaproszenie do aplikacji", "Cześć, " + person.getName() +
+//                "! Zapraszam cię do grupy " + person.getGroup().getName() + ". Aby się zarejestrować, kliknij " +
+//                "w poniższy link:\n" + "http://localhost:4200/sign-up/invite/" + userId);
+//    }
+
+    public UserSummary addUserFromInviteLink(long userId, UserInput input) {
         if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        Person person = personRepository.findById(personId)
+        User user = repository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        UserEntity user = person.getRelatedUser();
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
 
         user.setName(input.getName());
         String rawPassword = input.getPassword();
@@ -97,5 +118,16 @@ public class UserService implements UserDetailsService {
 
         repository.save(user);
         return modelMapper.map(user, UserSummary.class);
+    }
+
+    public void sendDebtNotification(long userId, long groupId, String username) {
+        User userToNotify = repository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+        User currentUser = repository.findByName(username);
+
+        mailService.sendMessage(userToNotify.getEmail(), "Powiadomienie o długu w aplikacji",
+                "Cześć, " + userToNotify.getName() + ". " + currentUser.getName() +
+                        " wysłał(a) ci powiadomienie o należności do spłacenia. Sprawdź w aplikacji:\n" +
+                        "http://localhost:4200/groups/" + groupId);
     }
 }

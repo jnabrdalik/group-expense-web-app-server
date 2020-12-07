@@ -26,32 +26,30 @@ public class Expense {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
-    private Person payer;
+    private User payer;
 
     @ManyToMany
-    @JoinTable(name = "expenses_persons",
+    @JoinTable(name = "users_expenses",
             joinColumns = @JoinColumn(name = "expense_id"),
-            inverseJoinColumns = @JoinColumn(name = "person_id")
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<Person> payees;
+    private Set<User> payees;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
     private Group group;
 
-    private long createdTime;
+    private long timeCreated;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
-    private Person createdBy;
-
-    private long lastEditTime;
+    private User creator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
-    private Person lastEditedBy;
+    private Expense originalExpense;
 
-    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL)
-    private List<ExpenseHistory> history;
+    @OneToMany(mappedBy = "originalExpense", cascade = CascadeType.ALL)
+    private List<Expense> previousVersions;
 
 }

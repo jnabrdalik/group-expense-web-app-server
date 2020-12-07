@@ -11,8 +11,9 @@ public class GroupDetails {
     private String name;
     private long timeCreated;
     private boolean registeredOnly;
-    private String creatorUserName;
+    private String creatorName;
     private List<ExpenseDetails> expenses;
-    private List<PersonDetails> persons;
+    private List<UserDetails> users;
+    private List<DebtPayment> payments;
 
 }

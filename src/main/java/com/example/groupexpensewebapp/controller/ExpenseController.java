@@ -1,8 +1,6 @@
 package com.example.groupexpensewebapp.controller;
 
-import com.example.groupexpensewebapp.dto.ExpenseChange;
-import com.example.groupexpensewebapp.dto.ExpenseDetails;
-import com.example.groupexpensewebapp.dto.ExpenseInput;
+import com.example.groupexpensewebapp.dto.*;
 import com.example.groupexpensewebapp.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,11 +15,6 @@ public class ExpenseController {
 
     private final ExpenseService expenseService;
 
-    @GetMapping("/{id}")
-    public ExpenseDetails getExpenseDetails(@PathVariable long id, Principal principal) {
-        return expenseService.getExpenseDetails(id, principal.getName());
-    }
-
     @GetMapping("/{id}/history")
     public List<ExpenseChange> getExpenseHistory(@PathVariable long id, Principal principal) {
         return expenseService.getExpenseHistory(id, principal != null ? principal.getName() : null);
@@ -30,6 +23,11 @@ public class ExpenseController {
     @PostMapping
     public ExpenseDetails addExpense(@RequestBody ExpenseInput input, Principal principal) {
         return expenseService.addExpense(input, principal.getName());
+    }
+
+    @PostMapping("/payment")
+    public DebtPayment addPayment(@RequestBody DebtPaymentInput input, Principal principal) {
+        return expenseService.addPayment(input, principal.getName());
     }
 
     @PutMapping("/{id}")

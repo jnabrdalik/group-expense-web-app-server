@@ -1,15 +1,15 @@
 package com.example.groupexpensewebapp.repository;
 
-import com.example.groupexpensewebapp.model.UserEntity;
+import com.example.groupexpensewebapp.model.User;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
 
-public interface UserRepository extends CrudRepository<UserEntity, Long> {
+public interface UserRepository extends CrudRepository<User, Long> {
 
-    UserEntity findByName(String username);
+    User findByName(String username);
 
     boolean existsByName(String username);
 
-    List<UserEntity> findByNameContainingIgnoreCase(String pattern);
+    List<User> findByNameContainingIgnoreCase(String pattern);
 }

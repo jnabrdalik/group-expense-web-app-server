@@ -11,8 +11,9 @@ public class ExpenseDetails {
     private String description;
     private int amount;
     private long timestamp;
-    private PersonSummary createdBy;
-    private PersonSummary payer;
-    private Set<PersonSummary> payees;
+    private long timeCreated;
+    private UserSummary creator;
+    private UserSummary payer;
+    private Set<UserSummary> payees;
 
 }

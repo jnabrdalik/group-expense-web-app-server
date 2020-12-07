@@ -1,9 +1,7 @@
 package com.example.groupexpensewebapp.controller;
 
-import com.example.groupexpensewebapp.dto.Debt;
-import com.example.groupexpensewebapp.dto.GroupDetails;
-import com.example.groupexpensewebapp.dto.GroupInput;
-import com.example.groupexpensewebapp.dto.GroupSummary;
+import com.example.groupexpensewebapp.debt.Debt;
+import com.example.groupexpensewebapp.dto.*;
 import com.example.groupexpensewebapp.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -46,5 +44,15 @@ public class GroupController {
     @GetMapping("/{id}/debts")
     public List<Debt> getDebts(@PathVariable long id, Principal principal) {
         return groupService.getDebtsForGroup(id, principal != null ? principal.getName() : null);
+    }
+
+    @PutMapping("/{id}/{userId}")
+    public UserSummary addUserToGroup(@PathVariable long id, @PathVariable long userId, Principal principal) {
+        return groupService.addUserToGroup(userId, id, principal.getName());
+    }
+
+    @DeleteMapping("/{id}/{userId}")
+    public void deleteUserFromGroup(@PathVariable long id, @PathVariable long userId, Principal principal) {
+        groupService.deleteUserFromGroup(userId, id, principal.getName());
     }
 }
