@@ -4,14 +4,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.persistence.*;
-import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "expenses")
+@Table(name = "expenses_history")
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Expense {
+public class ExpenseHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -28,8 +27,8 @@ public class Expense {
     @JoinColumn
     private Member payer;
 
-    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Involvement> involvements;
+    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL)
+    private Set<InvolvementHistory> involvements;
 
     private long timeCreated;
 
@@ -39,9 +38,6 @@ public class Expense {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn
-    private Group group;
-
-    @OneToMany(mappedBy = "originalExpense", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ExpenseHistory> previousVersions;
+    private Expense originalExpense;
 
 }

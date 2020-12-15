@@ -1,6 +1,7 @@
 package com.example.groupexpensewebapp.repository;
 
 import com.example.groupexpensewebapp.model.User;
+
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

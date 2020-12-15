@@ -3,21 +3,24 @@ package com.example.groupexpensewebapp.model;
 import lombok.Data;
 
 import javax.persistence.*;
-import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(name = "involvements")
 @Data
-public class User {
+public class Involvement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
-    private String name;
+    @ManyToOne
+    @JoinColumn
+    private Member payee;
 
-    private String password;
+    @ManyToOne
+    @JoinColumn
+    private Expense expense;
 
-    private String email;
+    private int weight;
 
 }

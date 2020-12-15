@@ -1,13 +1,21 @@
 package com.example.groupexpensewebapp.repository;
 
+import java.util.List;
+
 import com.example.groupexpensewebapp.model.Group;
-import com.example.groupexpensewebapp.model.User;
+
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 
 public interface GroupRepository extends CrudRepository<Group, Long> {
 
-    boolean existsByIdAndCreator_Name(long id, String creatorName);
+    @Query(value =
+            "select g from Group g join " +
+            "Member p on g.id = p.group.id " +
+            "where p.relatedUser.name = :name")
+    List<Group> findAllGroupsForUser(@Param("name") String name);
 
-    boolean existsByIdAndUsersContaining(long id, User user);
+    boolean existsByIdAndCreator_Name(long id, String creatorName);
 
 }

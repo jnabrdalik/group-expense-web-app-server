@@ -3,10 +3,9 @@ package com.example.groupexpensewebapp.dto;
 import lombok.Data;
 
 @Data
-public class UserInput {
+public class MemberInput {
 
     private String name;
-    private String password;
-    private String email;
+    private String relatedUserName;
 
 }

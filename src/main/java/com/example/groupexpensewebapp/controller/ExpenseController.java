@@ -20,28 +20,23 @@ public class ExpenseController {
         return expenseService.getExpenseHistory(id, principal != null ? principal.getName() : null);
     }
 
-    @PostMapping
-    public ExpenseDetails addExpense(@RequestBody ExpenseInput input, Principal principal) {
-        return expenseService.addExpense(input, principal.getName());
-    }
-
-    @PostMapping("/payment")
-    public DebtPayment addPayment(@RequestBody DebtPaymentInput input, Principal principal) {
-        return expenseService.addPayment(input, principal.getName());
+    @PostMapping("/{groupId}")
+    public ExpenseDetails addExpense(@RequestBody ExpenseInput input, @PathVariable long groupId, Principal principal) {
+        return expenseService.addExpense(input, groupId, principal != null ? principal.getName() : null);
     }
 
     @PutMapping("/{id}")
     public ExpenseDetails editExpense(@PathVariable long id, @RequestBody ExpenseInput input, Principal principal) {
-        return expenseService.editExpense(id, input, principal.getName());
+        return expenseService.editExpense(id, input, principal != null ? principal.getName() : null);
     }
 
-    @PatchMapping("/{id}/revert")
+    @PostMapping("/{id}/revert")
     public ExpenseDetails revertLastChange(@PathVariable long id, Principal principal) {
-        return expenseService.revertLastChange(id, principal.getName());
+        return expenseService.revertLastChange(id, principal != null ? principal.getName() : null);
     }
 
     @DeleteMapping("/{id}")
     public void deleteExpense(@PathVariable long id, Principal principal) {
-        expenseService.deleteExpense(id, principal.getName());
+        expenseService.deleteExpense(id, principal != null ? principal.getName() : null);
     }
 }

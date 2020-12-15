@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class ExpenseChange {
-    private UserSummary changedBy;
+    private MemberDetails changedBy;
     private long changeTimestamp;
     private List<FieldChange> changes;
 

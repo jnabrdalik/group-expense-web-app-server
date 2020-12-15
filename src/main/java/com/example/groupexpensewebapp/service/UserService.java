@@ -3,7 +3,6 @@ package com.example.groupexpensewebapp.service;
 import com.example.groupexpensewebapp.dto.UserInput;
 import com.example.groupexpensewebapp.dto.UserSummary;
 import com.example.groupexpensewebapp.model.User;
-import com.example.groupexpensewebapp.repository.GroupRepository;
 import com.example.groupexpensewebapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -23,16 +22,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
-    private final UserRepository repository;
-    private final GroupRepository groupRepository;
-    private final MailService mailService;
-    private final ExpenseService expenseService;
+    private final UserRepository userRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final ModelMapper modelMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = repository.findByName(username);
+        User user = userRepository.findByName(username);
 
         if (user == null) {
             throw new UsernameNotFoundException(username);
@@ -46,88 +42,43 @@ public class UserService implements UserDetailsService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        return repository.existsByName(username);
+        return userRepository.existsByName(username);
     }
 
     public UserSummary addUser(UserInput input) {
-        if (input.getName() == null && input.getPassword() == null) {
+        if (input.getName() == null || input.getPassword() == null || input.getEmail() == null ||
+                userRepository.existsByName(input.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
         User user = new User();
         user.setName(input.getName());
+        user.setEmail(input.getEmail());
         String rawPassword = input.getPassword();
         String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
         user.setPassword(encodedPassword);
 
-        User savedUser = repository.save(user);
+        User savedUser = userRepository.save(user);
         return modelMapper.map(savedUser, UserSummary.class);
     }
 
-//    public UserSummary addUnregisteredUser(UserInput input) {
-//
-//    }
+    public void changePassword(String newPassword, String username) {
+        User user = userRepository.findByName(username);
+        user.setPassword(bCryptPasswordEncoder.encode(newPassword));
+
+        userRepository.save(user);
+    }
 
     public List<UserSummary> findUsers(String query, String username) {
         if (query.length() < 3) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        List<User> users = repository.findByNameContainingIgnoreCase(query);
+        List<User> users = userRepository.findByNameContainingIgnoreCase(query);
 
         return users.stream()
                 .filter(user -> !user.getName().equals(username))
                 .map(user -> modelMapper.map(user, UserSummary.class))
                 .collect(Collectors.toList());
-    }
-
-//    public void sendInvite(long userId, String email, String username) {
-//        if (!mailService.isEmailValid(email)) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-//        }
-//
-//        User user = repository.findById(userId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-//
-//        user.getGroups().stream()
-//                .anyMatch(g -> g.getUsers())
-//
-//        User user = new User();
-//        userRepository.save(user);
-//
-//        person.setRelatedUser(user);
-//        repository.save(person);
-//
-//        mailService.sendMessage(email, "Zaproszenie do aplikacji", "Cześć, " + person.getName() +
-//                "! Zapraszam cię do grupy " + person.getGroup().getName() + ". Aby się zarejestrować, kliknij " +
-//                "w poniższy link:\n" + "http://localhost:4200/sign-up/invite/" + userId);
-//    }
-
-    public UserSummary addUserFromInviteLink(long userId, UserInput input) {
-        if (input.getName() == null || input.getPassword() == null || repository.existsByName(input.getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-
-        User user = repository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        user.setName(input.getName());
-        String rawPassword = input.getPassword();
-        String encodedPassword = bCryptPasswordEncoder.encode(rawPassword);
-        user.setPassword(encodedPassword);
-
-        repository.save(user);
-        return modelMapper.map(user, UserSummary.class);
-    }
-
-    public void sendDebtNotification(long userId, long groupId, String username) {
-        User userToNotify = repository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
-        User currentUser = repository.findByName(username);
-
-        mailService.sendMessage(userToNotify.getEmail(), "Powiadomienie o długu w aplikacji",
-                "Cześć, " + userToNotify.getName() + ". " + currentUser.getName() +
-                        " wysłał(a) ci powiadomienie o należności do spłacenia. Sprawdź w aplikacji:\n" +
-                        "http://localhost:4200/groups/" + groupId);
     }
 }

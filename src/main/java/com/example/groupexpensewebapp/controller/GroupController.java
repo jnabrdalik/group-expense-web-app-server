@@ -1,6 +1,5 @@
 package com.example.groupexpensewebapp.controller;
 
-import com.example.groupexpensewebapp.debt.Debt;
 import com.example.groupexpensewebapp.dto.*;
 import com.example.groupexpensewebapp.service.GroupService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +35,11 @@ public class GroupController {
         groupService.deleteGroup(id, principal.getName());
     }
 
+    @PutMapping("/{id}/archive")
+    public void archiveGroup(@PathVariable long id, Principal principal) {
+        this.groupService.archiveGroup(id, principal.getName());
+    }
+
     @GetMapping("/{id}")
     public GroupDetails getGroupDetails(@PathVariable long id, Principal principal) {
         return groupService.getGroupDetails(id, principal != null ? principal.getName() : null);
@@ -44,15 +48,5 @@ public class GroupController {
     @GetMapping("/{id}/debts")
     public List<Debt> getDebts(@PathVariable long id, Principal principal) {
         return groupService.getDebtsForGroup(id, principal != null ? principal.getName() : null);
-    }
-
-    @PutMapping("/{id}/{userId}")
-    public UserSummary addUserToGroup(@PathVariable long id, @PathVariable long userId, Principal principal) {
-        return groupService.addUserToGroup(userId, id, principal.getName());
-    }
-
-    @DeleteMapping("/{id}/{userId}")
-    public void deleteUserFromGroup(@PathVariable long id, @PathVariable long userId, Principal principal) {
-        groupService.deleteUserFromGroup(userId, id, principal.getName());
     }
 }

@@ -39,13 +39,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .cors().and()
                 .csrf().disable().authorizeRequests()
-                .antMatchers(HttpMethod.POST, LOGIN_URL).permitAll()
-                .antMatchers(HttpMethod.POST, SIGN_UP_URL).permitAll()
-                .antMatchers(HttpMethod.GET, CHECK_USER_EXISTS_URL).permitAll()
-                .antMatchers(HttpMethod.GET, GROUP_DETAILS_URL).permitAll()
-                .antMatchers(HttpMethod.GET, GROUP_DEBTS_URL).permitAll()
-                .antMatchers(HttpMethod.GET, EXPENSE_HISTORY_URL).permitAll()
-                .antMatchers(HttpMethod.POST, USER_INVITE_URL).permitAll()
+                .antMatchers(HttpMethod.POST, LOGIN_URL, SIGN_UP_URL).permitAll()
+                .antMatchers(HttpMethod.GET, CHECK_USER_EXISTS_URL, GROUP_DETAILS_URL, GROUP_DEBTS_URL).permitAll()
+                .antMatchers(EXPENSE_URL, MEMBER_URL).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilter(new JwtAuthenticationFilter(authenticationManager(), LOGIN_URL))
@@ -58,8 +54,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.applyPermitDefaultValues();
-        corsConfiguration.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
+        corsConfiguration.setAllowedOrigins(Collections.singletonList(CLIENT_URL));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         source.registerCorsConfiguration("/**", corsConfiguration);
         return source;
     }

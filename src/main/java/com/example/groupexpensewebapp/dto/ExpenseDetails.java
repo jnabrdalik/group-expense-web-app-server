@@ -1,6 +1,8 @@
 package com.example.groupexpensewebapp.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
@@ -11,9 +13,17 @@ public class ExpenseDetails {
     private String description;
     private int amount;
     private long timestamp;
-    private long timeCreated;
+    private MemberDetails payer;
+    private Set<InvolvementDetails> involvements;
     private UserSummary creator;
-    private UserSummary payer;
-    private Set<UserSummary> payees;
+    private long timeCreated;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InvolvementDetails {
+        private MemberDetails payee;
+        private int weight;
+    }
 
 }

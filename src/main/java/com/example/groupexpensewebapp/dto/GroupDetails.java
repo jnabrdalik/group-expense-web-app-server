@@ -10,10 +10,10 @@ public class GroupDetails {
     private long id;
     private String name;
     private long timeCreated;
-    private boolean registeredOnly;
+    private boolean forRegisteredOnly;
+    private boolean archived;
     private String creatorName;
     private List<ExpenseDetails> expenses;
-    private List<UserDetails> users;
-    private List<DebtPayment> payments;
+    private List<MemberDetails> members;
 
 }
